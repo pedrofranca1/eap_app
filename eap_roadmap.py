@@ -271,9 +271,9 @@ def roadmap(file):
        
     return resultados
 
-
-
+# file1 = 'Exemplos\\file1.xlsx'
+# roadmap(file1)
 
 def color_background(val):
-    color = 'red' if val=='INCORRECT SUM' else 'white'
+    color = 'rgba(203,44,48,1)' if val=='INCORRECT SUM' else 'white'
     return f'background-color: {color}'
