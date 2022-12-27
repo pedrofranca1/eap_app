@@ -30,11 +30,13 @@ section.main.css-k1vhr4.egzxvld3{
 
 
 button.css-629wbf.edgvbvh10 {
-    position: fixed;
-    top: 95%;
-    left: 5.5%;
-    width: 10%;
-    max-height:80%;
+    position: absolute;
+    bottom: calc(100vh - 1400px);
+    left: 50%;
+    transform: translate(-50%, 50%);
+    display: inline-block;
+    z-index: 999;
+    height: 50px;
 }
 
 span.css-10trblm.e16nr0p30 {
