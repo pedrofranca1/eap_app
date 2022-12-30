@@ -28,7 +28,7 @@ if st.session_state["authenticated"] == True:
   
    uploaded_file = st.file_uploader('Choose a Mero 2 EAP file', type='xlsx')
  
-   uploaded_file2 = st.file_uploader('Choose a Mero 2 EAP file from last month', type='xlsx')
+   uploaded_file2 = st.file_uploader('Choose a Mero 2 EAP file with a month prior to the one chosen above', type='xlsx')
       
  
    
@@ -43,35 +43,63 @@ if st.session_state["authenticated"] == True:
        df[['LEVEL', 'DESCRIPTION']] = df['LEVEL'].str.split(' -- ', 1, expand=True)
        
        
-       
-       option = st.sidebar.selectbox(
-              "Filter table",
-              (" ", "CORRECT SUM", "INCORRECT SUM")
-          )
-             
-       
-       optionMonth = st.sidebar.selectbox(
-              "Choose EAP Month",
-              (" ", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov","Dec"),
-              label_visibility=st.session_state.visibility,
-              disabled=st.session_state.disabled
-          )
-       
-       
-       optionYear = st.sidebar.selectbox(
-              "Choose EAP year",
-              (" ", "2020", "2021", "2022", "2023", "2024"),
-              label_visibility=st.session_state.visibility,
-              disabled=st.session_state.disabled
-          )
-       
-      
-       
-       finalDate = optionMonth + optionYear           
+       if uploaded_file2 is None:
+          option = st.sidebar.selectbox(
+                 "Filter table",
+                 (" ", "CORRECT SUM", "INCORRECT SUM")
+             )
+                
+          
+          optionMonth = st.sidebar.selectbox(
+                 "Choose EAP Month",
+                 (" ", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov","Dec"),
+                 label_visibility=st.session_state.visibility,
+                 disabled=st.session_state.disabled
+             )
+          
+          
+          optionYear = st.sidebar.selectbox(
+                 "Choose EAP year",
+                 (" ", "2020", "2021", "2022", "2023", "2024"),
+                 label_visibility=st.session_state.visibility,
+                 disabled=st.session_state.disabled
+             )
+          
+         
+          
+          finalDate = optionMonth + optionYear   
+          
+          if option == " ":       
+              st.dataframe(df.iloc[:,[0,3,1,2]].style.applymap(eap_roadmap.color_background, subset=['STATUS']))
+          elif option == "INCORRECT SUM":
+              df.query("STATUS == 'INCORRECT SUM'", inplace = True)
+              st.dataframe(df.iloc[:,[0,3,1,2]].style.applymap(eap_roadmap.color_background, subset=['STATUS']))  
+          else: 
+              df.query("STATUS == 'CORRECT SUM'", inplace = True)
+              st.dataframe(df.iloc[:,[0,3,1,2]].style.applymap(eap_roadmap.color_background, subset=['STATUS']))
               
    
-       if uploaded_file2 is not None:
+       elif uploaded_file2 is not None:
            print("Upload realizado arquivo 2")
+           
+           optionMonth = st.sidebar.selectbox(
+                  "Choose EAP Month",
+                  (" ", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov","Dec"),
+                  label_visibility=st.session_state.visibility,
+                  disabled=st.session_state.disabled
+              )
+           
+           
+           optionYear = st.sidebar.selectbox(
+                  "Choose EAP year",
+                  (" ", "2020", "2021", "2022", "2023", "2024"),
+                  label_visibility=st.session_state.visibility,
+                  disabled=st.session_state.disabled
+              )
+           
+          
+           
+           finalDate = optionMonth + optionYear
            
            check = st.sidebar.checkbox("Date selected", key="disabled")
            
@@ -108,18 +136,7 @@ if st.session_state["authenticated"] == True:
                   with open(fileName, 'rb') as f:
                       excel_file = f.read()  
                   excel_file_b64 = base64.b64encode(excel_file).decode('utf-8')                                            
-                  st.markdown(f'<a href="data:application/octet-stream;base64,{excel_file_b64}" download={fileName}>Download manipulated file</a>', unsafe_allow_html=True)    
-
-                    
-       else:
-            if option == " ":       
-                st.dataframe(df.iloc[:,[0,3,1,2]].style.applymap(eap_roadmap.color_background, subset=['STATUS']))
-            elif option == "INCORRECT SUM":
-                df.query("STATUS == 'INCORRECT SUM'", inplace = True)
-                st.dataframe(df.iloc[:,[0,3,1,2]].style.applymap(eap_roadmap.color_background, subset=['STATUS']))  
-            else: 
-                df.query("STATUS == 'CORRECT SUM'", inplace = True)
-                st.dataframe(df.iloc[:,[0,3,1,2]].style.applymap(eap_roadmap.color_background, subset=['STATUS']))
+                  st.markdown(f'<a href="data:application/octet-stream;base64,{excel_file_b64}" download={fileName}>Download manipulated file</a>', unsafe_allow_html=True)                               
        
    else:
        st.warning('you need to upload an excel file.')
@@ -146,7 +163,7 @@ if st.session_state["authenticated"] == True:
         )
        
    authenticator.button_logout()
-
+  
        
    
 
