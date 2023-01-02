@@ -132,6 +132,8 @@ if st.session_state["authenticated"] == True:
                         new_cell.alignment = cell.alignment.copy()  # Copy alignment formatting
                         
                   fileName = uploaded_file.name
+                  if " " in fileName:
+                       fileName = fileName.replace(" ", "_")
                   workbook.save(filename=fileName)
                   with open(fileName, 'rb') as f:
                       excel_file = f.read()  
