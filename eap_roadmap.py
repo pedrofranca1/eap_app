@@ -4,276 +4,266 @@ import numpy as np
 import math
 
 
-def roadmap(file):
+def create_dataframe_levels(file):
     # Ignora avisos de compilação
     warnings.simplefilter("ignore")
 
-    #Define caminho aonde esta o arquivo    
-
-    # Lê a tabela  
+    # Lê a tabela
     dataframe = pd.read_excel(file, 0)
-    
+
     # Encontra o index da primeira linha da tabela
-    valor_index = dataframe.index[dataframe['MERO 2 - ESTRUTURA ANALÍTICA DE PROJETO'] == "DESCRIÇÃO"][0]
+    columns_with_name = [
+        col
+        for col in dataframe.columns
+        if "ESTRUTURA ANALÍTICA DE PROJETO" in col
+    ]
+    if len(columns_with_name) > 0:
+        column_name = columns_with_name[0]
+        valor_index = dataframe[dataframe[column_name] == "DESCRIÇÃO"].index[0]
 
     # Apaga as linhas de fora da tabela
-    dataframe.drop(dataframe.index[0:valor_index],axis=0,inplace=True)
+    dataframe.drop(dataframe.index[0:valor_index], axis=0, inplace=True)
 
     # Renomeia as colunas
-    dataframe.rename(columns=dataframe.iloc[0], inplace = True)
-   
+    dataframe.rename(columns=dataframe.iloc[0], inplace=True)
+
     # Reseta o index da tabela
-    dataframe.reset_index(drop=True,inplace=True)
+    dataframe.reset_index(drop=True, inplace=True)
 
     # Apaga a primeira linha da tabela (já que ela está duplicada no cabeçalho)
-    dataframe.drop([0, 1],axis=0,inplace=True)
-    dataframe.reset_index(drop=True,inplace=True)
-     
+    dataframe = dataframe.drop(dataframe.index[0])
+    dataframe.reset_index(drop=True, inplace=True)
+
     # Preencher coluna 'ITEM'
-    dataframe['ITEM'] = dataframe['ITEM'].replace(np.nan, 0)
+    # dataframe["ITEM"] = dataframe["ITEM"].replace(np.nan, 0)
 
-    index = 0
-    
-    for row in dataframe.itertuples():  
-        if row[7] != 0:
-           temp = row[7]
-           number = temp[1:]
-           if temp.find(" ") != -1:
-              number = number.split(" ", 1)[0]
-           if temp.find(".") != -1: 
-              numberList = number.split(".")
-        elif row[7] == 0 and math.isnan(row[13]) == False:
-            number = temp[1:]
-            if temp.find(".") != -1: 
-               numberList = number.split(".")
-        elif row[7] == 0 and math.isnan(row[14]) == False:
-            number = temp[1:]
-            if temp.find(".") != -1: 
-               numberList = number.split(".")
-        elif row[7] == 0 and math.isnan(row[15]) == False:
-            number = temp[1:]
-            if temp.find(".") != -1: 
-               numberList = number.split(".")
+    # Quantidade de níveis
+    index_level_1 = dataframe.columns.get_loc("NÍVEL")
+    column_index = dataframe.iloc[0].eq("Valor").values.argmax()
+    qtd_levels = int(column_index - index_level_1)
+    index_level_item = dataframe.columns.get_loc("ITEM")
+    dataframe = dataframe.drop(dataframe.index[0])
+    dataframe.reset_index(drop=True, inplace=True)
 
-        #Transformação Nivel 5:
-        if math.isnan(row[13]) == False:      
-            if number.count(".") == 1:
-                finalTemp = temp[0] + number + "." + "1"
-                dataframe.iloc[index, 6] = finalTemp
-                temp = finalTemp
-            elif number.count(".") == 2:
-                newNumber = int(numberList[2]) + 1
-                finalTemp = temp[0] + numberList[0] + "." + numberList[1] + "." + str(newNumber)
-                dataframe.iloc[index, 6] = finalTemp
-                temp = finalTemp  
-            elif number.count(".") >= 2:
-                newNumber = int(numberList[2]) + 1
-                finalTemp = temp[0] + numberList[0] + "." + numberList[1] + "." + str(newNumber)
-                dataframe.iloc[index, 6] = finalTemp
-                temp = finalTemp 
-        
-        #Transformação Nivel 6:
-        if math.isnan(row[14]) == False:
-             if number.count(".") == 2:
-                 finalTemp = temp[0] + number + "." + "1"
-                 dataframe.iloc[index, 6] = finalTemp
-                 temp = finalTemp
-             elif number.count(".") == 3:
-                 newNumber = int(numberList[3]) + 1
-                 finalTemp = temp[0] + numberList[0] + "." + numberList[1] + "." + numberList[2] + "." + str(newNumber)
-                 dataframe.iloc[index, 6] = finalTemp
-                 temp = finalTemp
-             elif number.count(".") >= 3:
-                 newNumber = int(numberList[3]) + 1
-                 finalTemp = temp[0] + numberList[0] + "." + numberList[1] + "." + numberList[2] + "." + str(newNumber)
-                 dataframe.iloc[index, 6] = finalTemp
-                 temp = finalTemp
-            
-        #Transformação Nivel 7:    
-        if math.isnan(row[15]) == False:
-             if number.count(".") == 3:
-                 finalTemp = temp[0] + number + "." + "1"
-                 dataframe.iloc[index, 6] = finalTemp
-                 temp = finalTemp
-             elif number.count(".") == 4:
-                 newNumber = int(numberList[4]) + 1
-                 finalTemp = temp[0] + numberList[0] + "." + numberList[1] + "." + numberList[2] + "." + numberList[3] + "." + str(newNumber)
-                 dataframe.iloc[index, 6] = finalTemp
-                 temp = finalTemp
-         
-        index += 1
-       
+    # Remove todas as linhas 'NaN' e deleta colunas não utilizadas
+    for ind, row in dataframe.iterrows():
+        is_interval_nan = row[index_level_item:column_index].isna().all()
+        if is_interval_nan:
+            dataframe = dataframe.drop(index=ind)
+    dataframe = dataframe.drop(dataframe.index[0])
+    dataframe.reset_index(drop=True, inplace=True)
+    dataframe = dataframe.iloc[:, index_level_item:column_index]
+    index_desc = dataframe.columns.get_loc("DESCRIÇÃO")
+    new_columns = list(dataframe.columns[: index_desc + 1]) + [
+        "ITEM " + str(i) for i in range(index_desc, len(dataframe.columns))
+    ]
+    dataframe = dataframe.rename(
+        columns=dict(zip(dataframe.columns, new_columns))
+    )
+    dataframe["ITEM"] = dataframe["ITEM"].replace(np.nan, 0)
 
+    # Criação de níveis no dataframe
+    for index, row in dataframe.iterrows():
+        if row["ITEM"] != 0:
+            item = str(row["ITEM"])
+        if len(item) > 1:
+            number = item[1:]
+            if item.find("."):
+                number_list = number.split(".")
+
+        # Transformação Nivel 4:
+        if qtd_levels >= 4:
+            if math.isnan(row["ITEM 4"]) == False and row["ITEM"] == 0:
+                if number.count(".") == 0:
+                    final_item = item + "." + "1"
+                    dataframe.iat[
+                        index, dataframe.columns.get_loc("ITEM")
+                    ] = final_item
+                    item = final_item
+                elif number.count(".") == 1:
+                    new_number = int(number_list[1]) + 1
+                    final_item = (
+                        item[0] + number_list[0] + "." + str(new_number)
+                    )
+                    dataframe.iat[
+                        index, dataframe.columns.get_loc("ITEM")
+                    ] = final_item
+                    item = final_item
+                elif number.count(".") == 2:
+                    new_number = int(number_list[1]) + 1
+                    final_item = (
+                        item[0] + number_list[0] + "." + str(new_number)
+                    )
+                    dataframe.iat[
+                        index, dataframe.columns.get_loc("ITEM")
+                    ] = final_item
+                    item = final_item
+
+        # Transformação Nivel 5:
+        if qtd_levels >= 5:
+            if math.isnan(row["ITEM 5"]) == False and row["ITEM"] == 0:
+                if number.count(".") == 1:
+                    final_item = item + "." + "1"
+                    dataframe.iat[
+                        index, dataframe.columns.get_loc("ITEM")
+                    ] = final_item
+                    item = final_item
+                elif number.count(".") == 2:
+                    new_number = int(number_list[2]) + 1
+                    final_item = (
+                        item[0]
+                        + number_list[0]
+                        + "."
+                        + number_list[1]
+                        + "."
+                        + str(new_number)
+                    )
+                    dataframe.iat[
+                        index, dataframe.columns.get_loc("ITEM")
+                    ] = final_item
+                    item = final_item
+    return dataframe
+
+
+def sum_of_levels(dataframe):
     # Cria Dicionários
     nivel2 = {}
     nivel3 = {}
     nivel4 = {}
     nivel5 = {}
-    nivel6 = {}
-    nivel7 = {}
 
     # Loop linha-a-linha
-    for row in dataframe.itertuples():
-        if str(row[7]).count(".") == 0 and len(str(row[7])) == 1:
-            if math.isnan(row[10]) == False:
-                nivel2.update({row[7] : [row[10], row[8]]})
-        elif str(row[7]).count(".") == 0 and len(str(row[7])) > 1:
-            if math.isnan(row[11]) == False:
-                nivel3.update({row[7] : [row[11], row[8]]}) 
-        elif str(row[7]).count(".") == 1:
-            if math.isnan(row[12]) == False:
-                nivel4.update({row[7] : [row[12], row[8]]}) 
-        elif str(row[7]).count(".") == 2:
-             if math.isnan(row[13]) == False:
-                nivel5.update({row[7] : [row[13], row[8]]}) 
-        elif str(row[7]).count(".") == 3:
-             if math.isnan(row[14]) == False:
-                nivel6.update({row[7] : [row[14], row[8]]}) 
-        elif str(row[7]).count(".") == 4:
-             if math.isnan(row[15]) == False:
-                nivel7.update({row[7] : [row[15], row[8]]}) 
+    for index, row in dataframe.iterrows():
+        if str(row["ITEM"]).count(".") == 0 and len(str(row["ITEM"])) == 1:
+            if math.isnan(row["ITEM 2"]) == False:
+                nivel2.update({row["ITEM"]: [row["ITEM 2"], row["DESCRIÇÃO"]]})
+        elif str(row["ITEM"]).count(".") == 0 and len(str(row["ITEM"])) > 1:
+            if math.isnan(row["ITEM 3"]) == False:
+                nivel3.update({row["ITEM"]: [row["ITEM 3"], row["DESCRIÇÃO"]]})
+        elif str(row["ITEM"]).count(".") == 1:
+            if math.isnan(row["ITEM 4"]) == False:
+                nivel4.update({row["ITEM"]: [row["ITEM 4"], row["DESCRIÇÃO"]]})
+        elif str(row["ITEM"]).count(".") == 2:
+            if math.isnan(row["ITEM 5"]) == False:
+                nivel5.update({row["ITEM"]: [row["ITEM 5"], row["DESCRIÇÃO"]]})
 
-    #Outputs nivel 2
+    # Outputs nivel 2
     resultados = {}
 
-        
     if sum(nivel2[item][0] for item in nivel2) != 1:
-         resultados.update({ " & ".join(nivel2.keys()) + " -- " + str(" & ".join(nivel2[item][1] for item in nivel2)): str(sum(nivel2[item][0] for item in nivel2)) + ", INCORRECT SUM"})
+        resultados.update(
+            {
+                " & ".join(nivel2.keys())
+                + " -- "
+                + str(" & ".join(nivel2[item][1] for item in nivel2)): str(
+                    sum(nivel2[item][0] for item in nivel2)
+                )
+                + ", INCORRECT SUM"
+            }
+        )
     else:
-         resultados.update({ " & ".join(nivel2.keys()) + " -- " + str(" & ".join(nivel2[item][1] for item in nivel2)): str(sum(nivel2[item][0] for item in nivel2)) + ", CORRECT SUM"})
-        
-        
-    #Outputs nivel 3
+        resultados.update(
+            {
+                " & ".join(nivel2.keys())
+                + " -- "
+                + str(" & ".join(nivel2[item][1] for item in nivel2)): str(
+                    sum(nivel2[item][0] for item in nivel2)
+                )
+                + ", CORRECT SUM"
+            }
+        )
+
+    # Outputs nivel 3
 
     key1 = list(nivel3.keys())[0][0]
     value1 = nivel3[list(nivel3.keys())[0]][0]
     index = 0
 
     for k, v in nivel3.items():
-       if k[0] == key1 and index == 0:
+        if k[0] == key1 and index == 0:
             soma1 = float(value1)
             soma = soma1
             if 1.01 >= soma >= 0.99:
-               resultados.update({k[0] + " -- " + v[1]: str(soma) + ", CORRECT SUM"})
+                resultados.update(
+                    {k[0] + " -- " + v[1]: str(soma) + ", CORRECT SUM"}
+                )
             else:
-               resultados.update({k[0] + " -- " + v[1]: str(soma) + ", INCORRECT SUM"})
-       elif k[0] == key1:
+                resultados.update(
+                    {k[0] + " -- " + v[1]: str(soma) + ", INCORRECT SUM"}
+                )
+        elif k[0] == key1:
             soma = soma + float(v[0])
-       elif k[0] != key1:
+        elif k[0] != key1:
             if 1.01 >= soma >= 0.99:
-               resultados.update({k[0] + " -- " + v[1]: str(soma) + ", CORRECT SUM"})
+                resultados.update(
+                    {k[0] + " -- " + v[1]: str(soma) + ", CORRECT SUM"}
+                )
             else:
-               resultados.update({k[0] + " -- " + v[1]: str(soma) + ", INCORRECT SUM"})
+                resultados.update(
+                    {k[0] + " -- " + v[1]: str(soma) + ", INCORRECT SUM"}
+                )
             temp = k[0]
-            key1 = temp      
+            key1 = temp
             soma = float(v[0])
-       index += 1
-            
+        index += 1
 
-            
-    #Outputs nivel 4
+    # Outputs nivel 4
 
-    key1 = list(nivel4.keys())[0].partition('.')[0]
+    key1 = list(nivel4.keys())[0].partition(".")[0]
     value1 = nivel4[list(nivel4.keys())[0]][0]
     index = 0
 
-
     for k, v in nivel4.items():
-       if k.partition('.')[0] == key1 and index == 0:
+        if k.partition(".")[0] == key1 and index == 0:
             soma1 = float(value1)
             soma = soma1
-       elif k.partition('.')[0] == key1:
+        elif k.partition(".")[0] == key1:
             soma = soma + float(v[0])
-            key0 = k.partition('.')[0]
-       elif k.partition('.')[0] != key1:
+            key0 = k.partition(".")[0]
+        elif k.partition(".")[0] != key1:
             if 1.01 >= soma >= 0.99:
-               resultados.update({key0 + " -- " + v[1]: str(soma) + ", CORRECT SUM"})        
+                resultados.update(
+                    {key0 + " -- " + v[1]: str(soma) + ", CORRECT SUM"}
+                )
             else:
-               resultados.update({key0 + " -- " + v[1]: str(soma) + ", INCORRECT SUM"})
-            temp = k.partition('.')[0]
-            key1 = temp      
-            soma = float(v[0])        
-       index += 1
-           
+                resultados.update(
+                    {key0 + " -- " + v[1]: str(soma) + ", INCORRECT SUM"}
+                )
+            temp = k.partition(".")[0]
+            key1 = temp
+            soma = float(v[0])
+        index += 1
 
+    # Outputs nivel 5
 
-    #Outputs nivel 5
-
-    key1 = '.'.join(list(nivel5.keys())[0].split(".",2)[:2])
+    key1 = ".".join(list(nivel5.keys())[0].split(".", 2)[:2])
     value1 = nivel5[list(nivel5.keys())[0]][0]
     index = 0
-      
+
     for k, v in nivel5.items():
-       if '.'.join(k.split(".",2)[:2]) == key1 and index == 0:
+        if ".".join(k.split(".", 2)[:2]) == key1 and index == 0:
             soma1 = float(value1)
             soma = soma1
-       elif '.'.join(k.split(".",2)[:2]) == key1:
+        elif ".".join(k.split(".", 2)[:2]) == key1:
             soma = soma + float(v[0])
-            key0 = '.'.join(k.split(".",2)[:2])
-       elif '.'.join(k.split(".",2)[:2]) != key1:
+            key0 = ".".join(k.split(".", 2)[:2])
+        elif ".".join(k.split(".", 2)[:2]) != key1:
             if 1.01 >= soma >= 0.99:
-               resultados.update({key0 + " -- " + v[1]: str(soma) + ", CORRECT SUM"}) 
+                resultados.update(
+                    {key0 + " -- " + v[1]: str(soma) + ", CORRECT SUM"}
+                )
             else:
-               resultados.update({key0 + " -- " + v[1]: str(soma) + ", INCORRECT SUM"}) 
-            temp = '.'.join(k.split(".",2)[:2])
-            key1 = temp      
-            soma = float(v[0])        
-       index += 1
-             
-           
-           
-    #Outputs nivel 6
+                resultados.update(
+                    {key0 + " -- " + v[1]: str(soma) + ", INCORRECT SUM"}
+                )
+            temp = ".".join(k.split(".", 2)[:2])
+            key1 = temp
+            soma = float(v[0])
+        index += 1
 
-    key1 = '.'.join(list(nivel6.keys())[0].split(".",3)[:3])
-    value1 = nivel6[list(nivel6.keys())[0]][0]
-    index = 0
-      
-    for k, v in nivel6.items():
-       if '.'.join(k.split(".",3)[:3]) == key1 and index == 0:
-            soma1 = float(value1)
-            soma = soma1
-       elif '.'.join(k.split(".",3)[:3]) == key1:
-            soma = soma + float(v[0])
-            key0 = '.'.join(k.split(".",3)[:3])
-       elif '.'.join(k.split(".",3)[:3]) != key1:
-            if 1.01 >= soma >= 0.99:
-               resultados.update({key0 + " -- " + v[1]: str(soma) + ", CORRECT SUM"}) 
-            else:
-               resultados.update({key0 + " -- " + v[1]: str(soma) + ", INCORRECT SUM"}) 
-            temp = '.'.join(k.split(".",3)[:3])
-            key1 = temp      
-            soma = float(v[0])        
-       index += 1
-           
-
-    #Outputs nivel 7    
-           
-    key1 = '.'.join(list(nivel7.keys())[0].split(".",4)[:4])
-    value1 = nivel7[list(nivel7.keys())[0]][0]
-    index = 0
-      
-    for k, v in nivel7.items():
-       if '.'.join(k.split(".",4)[:4]) == key1 and index == 0:
-            soma1 = float(value1)
-            soma = soma1
-       elif '.'.join(k.split(".",4)[:4]) == key1:
-            soma = soma + float(v[0])
-            key0 = '.'.join(k.split(".",4)[:4])
-       elif '.'.join(k.split(".",4)[:4]) != key1:
-            if 1.01 >= soma >= 0.99:
-               resultados.update({key0 + " -- " + v[1]: str(soma) + ", CORRECT SUM"}) 
-            else:
-               resultados.update({key0 + " -- " + v[1]: str(soma) + ", INCORRECT SUM"}) 
-            temp = '.'.join(k.split(".",4)[:4])
-            key1 = temp      
-            soma = float(v[0])        
-       index += 1
-       
     return resultados
 
-# file1 = 'Exemplos\\file1.xlsx'
-# roadmap(file1)
 
-def color_background(val):
-    color = 'rgba(203,44,48,1)' if val=='INCORRECT SUM' else 'white'
-    return f'background-color: {color}'
+file = "data\Modelo_EAP - rev5.xlsx"
+dataframe = create_dataframe_levels(file)
+results = sum_of_levels(dataframe)
