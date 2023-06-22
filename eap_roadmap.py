@@ -264,6 +264,6 @@ def sum_of_levels(dataframe):
     return resultados
 
 
-file = "data\Modelo_EAP - rev5.xlsx"
-dataframe = create_dataframe_levels(file)
-results = sum_of_levels(dataframe)
+# file = "data\Modelo_EAP - rev5.xlsx"
+# dataframe = create_dataframe_levels(file)
+# results = sum_of_levels(dataframe)
